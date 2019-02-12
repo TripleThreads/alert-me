@@ -1,0 +1,80 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profile";
+    
+}
+
+@Html.Partial("_StatusMessage", Model.StatusMessage)
+
+<div class="row">
+    <div class="col-8 m-auto">
+        <form id="profile-form" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="All" class="text-danger"></div>
+
+
+            <div class="fileinput fileinput-new text-center" data-provides="fileinput">
+                <div class="fileinput-new thumbnail img-raised mx-auto" style="width:8rem">
+                    @if (Model.Input.Img != null)
+                    {
+                        <img class="img-responsive rounded" style="width:6rem;" src="data:image/jpeg;base64,@Convert.ToBase64String(@Model.Input.Img)" />
+                    }
+                    else
+                    {
+                        <img class="img-responsive rounded" style="width:6rem;" src="~/images/profile_placeholder.png" alt="...">
+                    }
+                </div>
+                <div class="fileinput-preview fileinput-exists thumbnail img-raised"></div>
+                
+                    <span class="col-6 mx-auto p-auto btn btn-raised btn-default" style="font-size: 0.7em;">
+                        <span class="fileinput-exists">Change</span>
+                        <input type="file" name="Image" id="Imageinput"/>
+                    </span>
+                
+            </div>
+
+            <div class="row">
+
+                <div class="form-group col">
+                    <label asp-for="Username"></label>
+                    <input asp-for="Username" class="form-control" disabled />
+                </div>
+                <div class="form-group col">
+                    <label asp-for="Input.Email"></label>
+                    @if (Model.IsEmailConfirmed)
+                    {
+                        <div class="input-group">
+                            <input asp-for="Input.Email" class="form-control" />
+                            <span class="input-group-addon" aria-hidden="true"><span class="glyphicon glyphicon-ok text-success"></span></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input asp-for="Input.Email" class="form-control" />
+                        <button id="email-verification" type="submit" asp-page-handler="SendVerificationEmail" class="btn btn-link">Send verification email</button>
+                    }
+                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="Input.PhoneNumber"></label>
+                <input asp-for="Input.PhoneNumber" class="form-control" />
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+            </div>
+
+
+
+            <button type="submit" class="d-block mt-3 mx-auto btn btn-small btn-info">Save</button>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+<script>
+    $("#sidebar").children("li").first().children("a").addClass("active");
+    $("h4").remove();
+</script>

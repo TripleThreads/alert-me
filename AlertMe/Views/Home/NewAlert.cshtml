@@ -1,0 +1,209 @@
+﻿@model AlertMe.Models.Alert
+
+@{
+    ViewData["Title"] = "NewAlert";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string CreateOrUpdate;
+    string ButtonName = "Update";
+    if (Model.Id == 0)
+    {
+        CreateOrUpdate = "CreateAlert";
+        ButtonName = "Submit";
+    }
+    else
+    {
+        CreateOrUpdate = "UpdateAlert";
+    }
+}
+@Html.Partial("_StatusMessage", Model.ParsedImage)
+
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
+
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v3.1.0/mapbox-gl-geocoder.min.js'></script>
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v3.1.0/mapbox-gl-geocoder.css' type='text/css' />
+
+<script src="~/lib/bootstrap/dist/js/tagsinput.js"></script>
+<link href="~/lib/bootstrap/dist/css/tagsinput.css" rel="stylesheet" />
+<style>
+    .field-validation-error {
+        color: #d12727;
+    }
+</style>
+<body onload="getLocation()">
+    @using (Html.BeginForm(CreateOrUpdate, "Home", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+
+        <div class="row">
+
+
+            <div class="card mx-auto" style="width: 50rem" id="add-alert">
+
+                <div class="card-header-info">
+                    <h5 class="d-block ml-5"> Create new alert</h5>
+                </div>
+                <div class="row">
+
+
+                    <div class="mt-3 mx-0 col d-block" id="map" style="height: 20rem;"></div>
+
+                    <div class="card-body my-4 col">
+
+                        <div class="form-group w-75 m-auto">
+                            @Html.HiddenFor(m => m.Id)
+                        </div>
+
+                        <div class="form-group w-75 m-auto">
+                            @Html.HiddenFor(m => m.Latitude, new { @class = "latitude" })
+                            @Html.HiddenFor(m => m.Longitude, new { @class = "longitude", autocomplete = "off" })
+
+                            <small id="emailHelp" class="form-text text-info">
+                                We'll use your current location as alert location if you dont specify on the map.
+                            </small>
+                        </div>
+
+                        <div class="form-group w-75 m-auto">
+                            @Html.LabelFor(m => m.Title)
+                            @Html.TextBoxFor(m => m.Title, new { @class = "form-control", autocomplete = "off" })
+                            @Html.ValidationMessageFor(m => m.Title)
+                        </div>
+
+                        <div class="form-group w-75 m-auto">
+                            @Html.LabelFor(m => m.Description)
+                            @Html.TextBoxFor(m => m.Description, new { @class = "form-control", autocomplete = "off" })
+                            @Html.ValidationMessageFor(m => m.Description)
+                        </div>
+
+                        <div class="form-group w-75 m-auto">
+                            @Html.LabelFor(m => m.Tags)
+                            @Html.TextBoxFor(m => m.Tags, new { @class = "bootstrap-tagsinput form-control", data_role = "tagsinput" })
+                            @Html.ValidationMessageFor(m => m.Tags)
+                        </div>
+
+
+                        <div class="fileinput fileinput-new text-center" data-provides="fileinput">
+                            <div class="fileinput-preview fileinput-exists thumbnail img-raised"></div>
+
+                            <span class="col-6 mx-auto p-auto btn btn-raised btn-default" style="font-size: 0.7em;">
+                                <span class="fileinput-exists">Change</span>
+                                <input type="file" asp-for="Image" />
+                            </span>
+
+                        </div>
+
+
+                        <button type="submit" class="btn btn-info d-block mx-auto mt-4">@ButtonName</button>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    }
+
+    <script>
+
+        var loc = {
+            lngLat: {
+                lng:0,
+                lat:0
+            }
+        }
+        var center = {
+            lng:'@Html.Raw(Model.Longitude == 0 ? 38.7578 : Model.Longitude)',
+            lat:'@Html.Raw(Model.Latitude == 0 ? 8.9806 : Model.Latitude)'
+        }
+
+
+        $(document).ready(function () {
+            console.log(@Html.Raw(Model.Id))
+            console.log(@Html.Raw(Model.ParsedImage));
+        })
+
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2VnbmkiLCJhIjoiY2pyM2N5a2Z2MHRjZDQ4cW14a3NhMzkxdSJ9.YfPekPetxFfh-eWsouEEEQ';
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v9',
+            center: [parseFloat(center.lng), parseFloat(center.lat)],
+            zoom: 13
+        });
+
+        map.addControl(new MapboxGeocoder({
+            accessToken: mapboxgl.accessToken
+        }));
+
+        map.on('load', function () {
+            if ('@Html.Raw(Model.Longitude)' != 0) {
+                loc.lngLat.lng = '@Html.Raw(Model.Longitude)';
+                loc.lngLat.lat = '@Html.Raw(Model.Latitude)';
+                addMarker(loc);
+            }
+        });
+
+       // map.on('click', addMarker);
+        map.on('click', function (e) {
+            addMarker(e);
+        });
+
+        function addMarker(e) {
+            console.log(e.geom);
+            try {
+                map.removeLayer("circles");
+                map.removeSource("markers");
+
+            }
+            catch (err) {
+                //        alert("Error!");
+            }
+            finally {
+                map.addSource('markers', {
+                    "type": "geojson",
+                    "data": {
+                        "type": "FeatureCollection",
+                        "features": [{
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [e.lngLat.lng, e.lngLat.lat]
+                            },
+                            "properties": {
+                                "modelId": 2,
+                            },
+                        }]
+                    }
+                });
+
+                map.addLayer({
+                    "id": "circles",
+                    "source": "markers",
+                    "type": "circle",
+                    "paint": {
+                        "circle-radius": 20,
+                        "circle-opacity": 0,
+                        "circle-stroke-width": 1,
+                        "circle-stroke-color": "#ee4343",
+                        "circle-stroke-opacity": 1,
+                    },
+                    "filter": ["==", "modelId", 2],
+                });
+
+                $(".latitude").val(e.lngLat.lat);
+                $(".longitude").val(e.lngLat.lng);
+            }
+        }
+
+        function getLocation(e) {
+            if (navigator.geolocation) {
+                return navigator.geolocation.getCurrentPosition(setLocation);
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function setLocation(position) {
+            $(".latitude").val(position.coords.latitude);
+            $(".longitude").val(position.coords.longitude);
+        }
+    </script>
+</body>

@@ -1,0 +1,15 @@
+﻿.map-container .card {
+    width: 33rem;
+    /* setup the css transitions */
+    -webkit-transition: width 1s;
+    -moz-transition: width 1s;
+    transition: width 1s;
+}
+
+.map-container .card.small {
+    width: 20rem;
+}
+
+.map-container .card.large{
+    width: 45rem;
+}

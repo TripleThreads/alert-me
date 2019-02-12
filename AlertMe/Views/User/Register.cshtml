@@ -1,0 +1,150 @@
+﻿
+@model AlertMe.ViewModels.StateUserViewModel
+
+@{
+    ViewBag.Title = "Register";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+.field-validation-error{
+    color:#d12727;
+}
+
+</style>
+
+<div class="card col-md-6 mx-auto my-5">
+
+    <h2 class="mx-auto my-3">Register</h2>
+    @using (Html.BeginForm("Create", "Users"))
+    {
+    <div class="card-body text-gray">
+
+        <div class="row">
+
+            <div class="form-group col">
+                @Html.LabelFor(m => m.User.FirstName)
+                @Html.TextBoxFor(m => m.User.FirstName, new { @class = "form-control"})
+                @Html.ValidationMessageFor(m => m.User.FirstName)
+            </div>
+
+            <div class="form-group col">
+                @Html.LabelFor(m => m.User.LastName)
+                @Html.TextBoxFor(m => m.User.LastName, new { @class = "form-control" })
+                @Html.ValidationMessageFor(m => m.User.LastName)
+            </div>
+        </div>
+
+        <div class="row">
+
+            <div class="form-group label-floating has-success col">
+                @Html.LabelFor(m => m.User.BirthDate)
+                @Html.TextBoxFor(m => m.User.BirthDate, new { @class = "form-control datetimepicker" })
+                @Html.ValidationMessageFor(m => m.User.BirthDate)
+                <span class="form-control-feedback">
+                    <i class="fa fa-calendar"></i>
+                </span>
+            </div>
+
+            <div class="form-group col">
+                @Html.LabelFor(m => m.User.Email)
+                @Html.TextBoxFor(m => m.User.Email, new { @class = "form-control" })
+                @Html.ValidationMessageFor(m => m.User.Email)
+            </div>
+        </div>
+
+
+
+        <div class="row">
+
+            <div class="form-group col">
+                @Html.LabelFor(m => m.User.State)
+                @Html.DropDownListFor(m => m.User.State, new SelectList(Model.States, "Id", "Name"),
+                                                    "Select States", new {@class = "form-control dropdown state" })
+                @Html.ValidationMessageFor(m => m.User.State)
+            </div>
+
+            <div class="form-group col">
+                @Html.LabelFor(m => m.User.City)
+                @Html.TextBoxFor(m => m.User.City, new { @class = "form-control city" })
+                @Html.ValidationMessageFor(m => m.User.City)
+                <ul class="list-group border-success" style="border:1px" id="result"></ul>
+            </div>
+            
+
+            <a onclick="doStuff()"></a>
+        </div>
+        <input type="submit" class="btn btn-info d-block mx-auto" value="Register"/>
+    </div>
+}
+</div>
+
+<script>
+
+    $(".row").on("click", function () {
+
+        $(".dropdown").children().addClass("dropdown-item");    
+        $(".dropdown").children().css({
+            "font-family": "Monaco",
+            "font-weight": "light"
+        });
+    });
+    
+    $(".city").keydown(function () {
+        $("#result").children().remove();
+        if ($(".city").val() == "") {
+            return;
+        }
+
+        var model = {
+            state: parseInt($(".state").val()),
+            city: $(".city").val()
+        };
+       
+        console.log(JSON.stringify(model));
+        
+
+        $.ajax({
+            url: "@Url.Action("GetCity", "Home")",
+            type: 'POST',
+            data: JSON.stringify(model),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (resp) {
+
+                console.log(resp);
+                $.each(resp, function (index, item) {
+                    if (item.name.toLowerCase().includes($(".city").val().toLowerCase())) {
+                        $("#result").append('<a class="cit" href="#">' + item.name + '</a>');
+                    }
+                });
+                
+                
+            }
+        });
+    });
+
+    $(document).click(function (event) {
+        
+        var text = $(event.target).text();
+
+        if (text.includes("Haw")) {
+            $(".city").val(text);
+        }
+        
+    });
+
+    $('.datetimepicker').datetimepicker({
+        format: "DD/MM/YYYY",
+        icons: {
+            time: "fa fa-clock-o",
+            date: "fa fa-calendar",
+            up: "fa fa-chevron-up",
+            down: "fa fa-chevron-down",
+            previous: 'fa fa-chevron-left',
+            next: 'fa fa-chevron-right',
+            today: 'fa fa-screenshot',
+            clear: 'fa fa-trash',
+            close: 'fa fa-remove'
+        }
+    });
+</script>

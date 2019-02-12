@@ -1,0 +1,61 @@
+﻿@page
+@model LoginModel
+
+@{
+    ViewData["Title"] = "Log in";
+}
+
+<div class="col-lg-4 col-md-6 mx-auto">
+    <div class="card card-login">
+            <div class="card-header card-header-pills text-center">
+                <h2 class="card-title font-weight-light serif-font">Login</h2>
+                <div class="social-line">
+                    <form asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
+                        <button type="submit" class="btn btn-social btn-just-icon btn-round btn-facebook" name="provider" value="Facebook">
+                            <i class="fa fa-facebook-square"></i>
+                        </button>
+                        <button class="btn btn-social btn-just-icon btn-round btn-google" name="provider" value="Google">
+                            <i class="fa fa-google"> </i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <p class="description text-center">Or Be Classical</p>
+            <div class="card-body">
+                <form method="post">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="material-icons">mail</i>
+                            </span>
+                        </div>
+                        <input asp-for="Input.Email" placeholder="Email..." class="form-control" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="material-icons">lock_outline</i>
+                            </span>
+                        </div>
+                        <input asp-for="Input.Password" placeholder="Password..." class="form-control" />
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                    </div>
+                    <div class="footer text-center">
+                        <input type="submit" class="d-block mt-3 mx-auto btn btn-small btn-info" value="Login" />
+                        <div class="form-group">
+                            <p>
+                                <a class="btn btn-info btn-link btn-wd btn-lg" asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">REGISTER</a>
+                            </p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+    </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

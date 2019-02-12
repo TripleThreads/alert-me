@@ -1,0 +1,68 @@
+﻿@model AlertMe.ViewModels.ViewProfileViewModel
+
+@{
+    string picture = null;
+    if (Model.User.Picture != null)
+    {
+        picture = Convert.ToBase64String(Model.User.Picture);
+    }
+
+    ViewData["Title"] = "ViewProfile";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var subs = "Subscribe";
+    if (Model.LoggedInUserSubscribed)
+    {
+        subs = "UnSubscribe";
+    }
+}
+<div class="card card-profile mx-auto" style="margin-top:7rem; width: 20rem">
+    <div class="card-header card-header-image mx-auto" style="width:10rem;">
+        <a href="#pablo">
+            @if (picture != null)
+            {
+                <img src="data:image/jpeg;base64, @picture" class="img">
+            }
+            else {
+                <img class="img-responsive rounded" style="width:6rem;" src="~/images/profile_placeholder.png" alt="...">
+            }
+        </a>
+    </div>
+
+    <div class="card-body mt-3">
+        <h4 class="card-title">@Model.User.FirstName @Model.User.LastName</h4>
+        <p class="text-gray">EMAIL : @Model.User.Email</p>
+        <h6 class="text-gray"> @Model.User.City , @Model.User.State</h6>
+        <h6 class="text-gray d-inline"> @Model.User.FirstName created these</h6>
+        <a class="card-link d-inline page-link" asp-action="/AlertsByUserAsync/@Model.User.Id">Alerts </a>
+
+        @if (!Model.IsLoggedInUser)
+        {
+            <button class="btn btn-sm btn-outline-info mx-auto d-block" value="@subs" id="follow-btn">@subs</button>
+        }
+    </div>
+
+    <div class="card-footer justify-content-center">
+        
+    </div>
+</div>
+
+<script>
+    var subs_btn = $("#follow-btn");
+    subs_btn.on('click', function () {
+
+        var val = $(this).val();
+        var json = { "UserId": "@Html.Raw(Model.User.Id)" };
+        $.ajax({
+            url: "/Home/" + val,
+            type: 'POST',
+            data: JSON.stringify(json),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (resp) {
+                subs_btn.val(resp);
+                subs_btn.text(resp);
+            }
+        });
+    });
+</script>

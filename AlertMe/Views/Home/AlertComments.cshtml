@@ -1,0 +1,101 @@
+﻿@model AlertMe.ViewModels.AlertCommentsViewModel
+
+
+@{
+    ViewData["Title"] = "AlertComments";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string getTime(DateTime createdAt)
+    {
+        var net = DateTime.Now.Subtract(createdAt);
+        if (net.TotalDays > 1)
+        {
+            return Math.Floor(net.TotalDays) + " days ago";
+        }
+
+        else if (net.TotalHours > 1)
+        {
+            return Math.Floor(net.TotalHours) + " hrs ago";
+        }
+
+        else
+        {
+            return Math.Floor(net.TotalMinutes) + " mins ago";
+        }
+    }
+
+}
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>
+<script src="~/js/LoadMap.js"></script>
+<body>
+    <div class="row w-75">
+        <div class="card mx-auto col-9">
+            <div class="card-img-top m-0 mx-0" id="map-0" style="height:25rem;"></div>
+            <input type="hidden" class="alert-id" value="@Model.Alert.Id" />
+
+            <div class="card-body">
+
+                <button class="btn btn-sm btn-social btn-link critical-btn" data-toggle="tooltip" title="Critical"
+                        onclick="getLocation()" value="@Model.Alert.Id">
+                    <i class="material-icons text-rose">error</i>
+                    <span class="ml-1">@Model.Alert.Critical</span>
+                </button>
+
+                <button class="btn btn-sm btn-social btn-link warning-btn" data-toggle="tooltip" title="Warning"
+                        onclick="getLocation()" value="@Model.Alert.Id">
+                    <i class="material-icons text-warning">warning</i>
+                    <span class="ml-1">@Model.Alert.Warning</span>
+                </button>
+
+                <button class="btn btn-sm btn-social btn-link false-alarm-btn" data-toggle="tooltip" title="False alarm"
+                        onclick="getLocation()" value="@Model.Alert.Id">
+                    <i class="material-icons text-info">arrow_downward</i>
+                    <span class="ml-1">@Model.Alert.FalseAlarm</span>
+                </button>
+
+                <a class="btn btn-sm btn-social btn-link" data-toggle="tooltip" title="Comments"
+                   asp-action="/AlertComments/@Model.Alert.Id">
+
+                    <i class="material-icons text-primary">comment</i>
+                </a>
+
+                <span class="float-right" style="font-size: 12px;">
+                    <input type="hidden" class="created-at-input" value="@getTime(Model.Alert.CreatedAt)" />
+                    <input type="hidden" class="last-check-input" value="@getTime(Model.Alert.LastCheck)" />
+                    Created : <span class="created-at">@getTime(Model.Alert.CreatedAt)</span>
+                    <br>
+                    Last check : <span class="last-check">@getTime(Model.Alert.LastCheck)</span>
+                </span>
+
+                <h4>@Model.Alert.Title</h4>
+                <p class="card-text">@Model.Alert.Description</p>
+                @foreach (string tag in Model.Alert.Tags.Trim().Split(","))
+                {
+                    <a class="links-horizontal text-info" asp-action="/FilterByTagAsync/@tag">#@tag</a>
+                }
+
+            </div>
+
+        </div>
+        <div class="card col-3">
+
+        </div>
+    </div>
+</body>
+
+<script>
+
+    $(document).ready(async function () {
+
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2VnbmkiLCJhIjoiY2pyM2N5a2Z2MHRjZDQ4cW14a3NhMzkxdSJ9.YfPekPetxFfh-eWsouEEEQ';
+
+        var AlertsArray = JSON.parse('@Html.Raw(Model.JsonFormat)');
+
+        console.log(AlertsArray);
+        
+        await loadMap(AlertsArray.UserAlertStrings, 0);
+        
+
+    });
+</script>

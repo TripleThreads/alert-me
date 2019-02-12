@@ -1,0 +1,602 @@
+﻿@model AlertMe.ViewModels.JsonAlertViewModel
+
+@{
+    ViewBag.Title = "Alerts";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    
+    string getTime(DateTime createdAt)
+    {
+        var net = DateTime.Now.Subtract(createdAt);
+        if (net.TotalDays > 1)
+        {
+            return Math.Floor(net.TotalDays) + " days ago";
+        }
+
+        else if (net.TotalHours > 1)
+        {
+            return Math.Floor(net.TotalHours) + " hrs ago";
+        }
+
+        else
+        {
+            return Math.Floor(net.TotalMinutes) + " mins ago";
+        }
+    }
+}
+<head>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.js'></script>
+    <link href="~/css/Alert.css" />
+    <script src="~/js/LoadMap.js"></script>
+    <script src="~/js/Updatetime.js"></script>
+    <script src="~/js/PopulateComments.js"></script>
+
+    <style>
+        .map-container .card {
+            width: 33rem;
+            /* setup the css transitions */
+            -webkit-transition: width 1s;
+            -moz-transition: width 1s;
+            transition: width 1s;
+        }
+
+        .map-container .card:hover {
+            -webkit-box-shadow: -1px 9px 40px -12px rgba(0,0,0,0.75);
+            -moz-box-shadow: -1px 9px 40px -12px rgba(0,0,0,0.75);
+            box-shadow: -1px 9px 40px -12px rgba(0, 0, 0, 0.75);
+        }
+
+        .map-container .card.small {
+            width: 20rem;
+        }
+
+        .map-container .card.large {
+            width: 60%;
+            height : 35rem;
+        }
+        #comment-container.hide{
+            display:none;
+        }
+    </style>
+
+</head>
+
+<body onload="updateClock(); setInterval('updateClock()', 1000)" class="w-100">
+    <div></div>
+    <div class="row">
+
+        <div class="dropdown mt-2 col">
+
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                List Alerts By
+            </button>
+
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item" onclick="sortAlert('CREATED')" href="#">Created date</a>
+                <a class="dropdown-item" onclick="sortAlert('POPULAR')" href="#">Poplular Alerts</a>
+                <a class="dropdown-item" onclick="sortAlert('NERBY')" href="#">Nearby alerts</a>
+                <a class="dropdown-item" onclick="sortAlert('CHECKED')" href="#">Checked Recently</a>
+            </div>
+
+        </div>
+
+        <form class="col-lg-pull-4 form-inline float-right" method="get" asp-action="SearchAlertAsync" style="height:3rem;">
+            <input class="form-control" name="tag" autocomplete="off" style="width:12rem; font-size: 1.8em; font-weight:lighter" />
+            <button type="submit" class="btn btn-sm btn-social btn-link float-right mt-4">
+                <i class="material-icons " style="font-size: 3em">search</i>
+            </button>
+        </form>
+
+        <a class="btn btn-social d-block btn-link m-auto float-right col-1" id="add-new-alert" asp-action="NewAlert"
+           data-toggle="tooltip" title="Add alert">
+            <i class=" material-icons text-danger d-inline-flex m-auto" style="font-size: 3em;">add_alert</i>
+        </a>
+
+    </div>
+
+    <div class="row map-container">
+
+        @for (int index = 0; index < Model.Alerts.Count; index++)
+        {
+            <div class="card mx-3">
+                <div class="card-img-top m-0 mx-0" id="map-@index" onclick="resizeCard(this.id)" style="height:25rem;">
+
+                </div>
+
+                <input type="hidden" class="alert-id" value="@Model.Alerts.ElementAt(index).Id" />
+
+                <div class="card-body">
+
+                    <input type="hidden" value="@index" class="map-index" />
+
+                    <button class="btn btn-sm btn-social btn-link critical-btn" data-toggle="tooltip" title="Critical"
+                            onclick="getLocation()" value="@Model.Alerts.ElementAt(index).Id">
+                        <i class="material-icons text-rose">error</i>
+                        <span class="ml-1">@Model.Alerts.ElementAt(index).Critical</span>
+                    </button>
+
+                    <button class="btn btn-sm btn-social btn-link warning-btn" data-toggle="tooltip" title="Warning"
+                            onclick="getLocation()" value="@Model.Alerts.ElementAt(index).Id">
+                        <i class="material-icons text-warning">warning</i>
+                        <span class="ml-1">@Model.Alerts.ElementAt(index).Warning</span>
+                    </button>
+
+                    <button class="btn btn-sm btn-social btn-link false-alarm-btn" data-toggle="tooltip" title="False alarm"
+                            onclick="getLocation()" value="@Model.Alerts.ElementAt(index).Id">
+                        <i class="material-icons text-info">arrow_downward</i>
+                        <span class="ml-1">@Model.Alerts.ElementAt(index).FalseAlarm</span>
+                    </button>
+
+                    <button class="btn btn-sm btn-social btn-link comment" value="@index">
+                        <i class="material-icons text-primary mr-2">comment</i>
+                        <span class="comment-number-@index">@Model.Alerts.ElementAt(index).NumberOfComments </span>
+                    </button>
+
+                    @if (Model.Alerts.ElementAt(index).Picture != null)
+                    {
+                        <button class="btn btn-sm btn-social btn-link image-btn" value="@index"
+                                data-toggle="modal" data-target="#ImageModal">
+                            <i class="material-icons text-primary">image</i>
+                        </button>
+                    }
+
+                    @if (Model.User.Id.Equals(Model.Alerts.ElementAt(index).CreatedById))
+                    {
+
+                        <a class="btn btn-sm btn-social btn-link" data-toggle="tooltip" title="edit" value="@index"
+                           asp-action="EditAlert/@Model.Alerts.ElementAt(index).Id">
+                            <i class="material-icons text-gray">edit</i>
+                        </a>
+
+                        <button class="btn btn-sm btn-social btn-link delete-btn" data-toggle="modal" data-target="#deleteModal" value="@index">
+                            <i class="material-icons text-rose">delete</i>
+                        </button>
+                    }
+
+                    <span class="float-right" style="font-size: 12px;">
+                        <input type="hidden" class="created-at-input-@index" value="@getTime(Model.Alerts.ElementAt(index).CreatedAt)" />
+                        <input type="hidden" class="last-check-input-@index" value="@getTime(Model.Alerts.ElementAt(index).LastCheck)" />
+                        Created : <span class="created-at-@index">@getTime(Model.Alerts.ElementAt(index).CreatedAt)</span>
+                        <br>
+                        Last check : <span class="last-check-@index">@getTime(Model.Alerts.ElementAt(index).LastCheck)</span>
+                    </span>
+
+                    <h4>@Model.Alerts.ElementAt(index).Title</h4>
+                    <p class="card-text">@Model.Alerts.ElementAt(index).Description</p>
+                    @foreach (string tag in Model.Alerts.ElementAt(index).Tags.Trim().Split(","))
+                    {
+                        <a class="links-horizontal text-info" asp-action="/FilterByTagAsync/@tag">#@tag</a>
+                    }
+                    <form method="post" asp-action="ViewProfile" class="inline-form float-right">
+                        <input type="hidden" name="id" value="@Model.Alerts.ElementAt(index).CreatedBy.Id" />
+                        <button class="btn btn-sm btn-social btn-link">
+                            @Model.Alerts.ElementAt(index).CreatedBy.FirstName
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        }
+        <div class="card col-lg-4 col-sm-12 mx-3 float-right pre-scrollable" style="max-height:35rem;" id="comment-container">
+            <div class="card-header-info">
+                <h5 class="px-3 py-1 mx-auto">Comments</h5>
+            </div>
+
+            <div class="card-body">
+                <div id="comment-list">
+                    <p>Be the first to comment on this post</p>
+                </div>
+                <div class="form-group">
+                    <input class="form-control" type="text" id="comment-content" />
+                    <button class="btn btn-info d-block mt-3 mx-auto" id="submit-comment" send>Comment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   
+    <div class="modal fade" id="ImageModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <i class="material-icons">clear</i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="image-list">
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger btn-link" value="key" data-dismiss="modal">Close</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Delete Alert</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    You are not able to recover your alert if you delete it. Are you sure?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="confirm-delete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteComment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ModalLabel">Delete Comment</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    You are not able to recover your alert if you delete it. Are you sure?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="con-delete-comment-btn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        var CurrentPosition;
+        var alertLevel;
+        var alertId;
+        var mapId;
+        $('.false-alarm-btn').click(function () {
+            alertId = $(this).attr("value");
+            alertLevel = 0;
+            mapId = $(this).parent().children('.map-index').val();
+
+            var inc = parseInt($(this).children('span').text());
+            inc++;
+            $(this).children('span').text(inc);
+        });
+
+        $('.warning-btn').click(function () {
+            alertId = $(this).attr("value");
+            alertLevel = 1;
+            mapId = $(this).parent().children('.map-index').val();
+
+            var inc = parseInt($(this).children('span').text());
+            inc++;
+            $(this).children('span').text(inc);
+
+        });
+
+        $('.critical-btn').click(function () {
+            alertId = $(this).attr("value");
+            alertLevel = 2;
+            mapId = $(this).parent().children('.map-index').val();
+
+            var inc = parseInt($(this).children('span').text());
+            inc++;
+            $(this).children('span').text(inc);
+        });
+
+
+        function getLocation(e) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(send_alert);
+            } else {
+                x.innerHTML = "Geolocation is not supported by this browser.";
+            }
+        }
+
+        function send_alert(position) {
+
+            var location = {
+                UserId:'@Html.Raw(Model.User.Id)',
+                Latitude: position.coords.latitude,
+                Longitude: position.coords.longitude,
+                AlertLevel : alertLevel,
+                AlertId : alertId
+            };
+
+            $.ajax({
+                url: "@Url.Action("AddAlert", "Home")",
+                type: 'POST',
+                data: JSON.stringify(location),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (resp) {
+                    $('.last-check-' + mapId).text("0 mins ago");
+                    timeAtLoad = new Date();
+
+                    loadMap(resp.UserAlertStrings, mapId);
+
+                }
+            });
+        }
+    </script>
+
+    <script>
+        function getPosition(position) {
+            CurrentPosition = position;
+        }
+
+        function sortAlert(e) {
+
+            var key = {
+                SortBy: e,
+                Latitude: CurrentPosition.coords.latitude,
+                Longitude: CurrentPosition.coords.longitude
+            };
+
+            $.ajax({
+                url: "@Url.Action("SortAlerts", "Home")",
+                type: 'POST',
+                data: JSON.stringify(key),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (AlertsArray) {
+
+                    for (var i = 0; i < AlertsArray.length; i++) {
+
+                        for (var j = 0; j < AlertsArray.length; j++) {
+
+                            if ($("#map-" + j).parent().children('.alert-id').val() == AlertsArray[i].Id) {
+
+                                var curMap = $("#map-" + j).parent();
+
+                                curMap.appendTo(curMap.parent());
+
+                            }
+                        }
+                    }
+
+                }
+            });
+
+        }
+    </script>
+
+    <script type="text/javascript">
+        var timeAtLoad;
+        var createdMinutes;
+        var lastCheckMinutes;
+        var AlertsArray;
+        $(document).ready(function () {
+
+            $("#notification-num").text("@Html.Raw(Model.NotificationsNumber)");
+
+            AlertsArray = JSON.parse('@Html.Raw(Model.JsonFormat)');
+
+            timeAtLoad = new Date();
+
+            navigator.geolocation.getCurrentPosition(getPosition);
+
+        });
+    </script>
+
+    <script>
+        var alertId;
+        var mapIndex;
+        var commentId;
+
+        var comment_container = $("#comment-container");
+
+        var image_button = $('.image-btn');
+        var delete_btn = $('.delete-btn');
+        var comment = $(".comment");
+        var confirm_delete = $("#confirm-delete");
+        var confirm_delete_comment = $("#con-delete-comment-btn");
+        var submit_comment = $("#submit-comment");
+        $(document).ready(async function () {
+
+            comment_container.toggleClass('hide');
+
+            mapboxgl.accessToken = 'pk.eyJ1Ijoic2VnbmkiLCJhIjoiY2pyM2N5a2Z2MHRjZDQ4cW14a3NhMzkxdSJ9.YfPekPetxFfh-eWsouEEEQ';
+
+            var AlertsArray = JSON.parse('@Html.Raw(Model.JsonFormat)');
+
+            for (var i = 0; i < AlertsArray.length; i++) {
+                await loadMap(AlertsArray[i].UserAlertStrings, i);
+            }
+
+            $('.map-container .card').hover(
+                // trigger when mouse hover
+                function () {
+                    $(this).animate({
+                        marginTop: "-=1%",
+                    }, 200);
+                },
+
+                // trigger when mouse out
+                function () {
+                    $(this).animate({
+                        marginTop: "+=1%"
+                    }, 200);
+                }
+            );
+
+        });
+
+        comment.on("click", function () {
+            
+            mapIndex = $(this).val();
+
+            resizeCard('map-' + mapIndex);
+            
+            alertId = $('#map-' + mapIndex).parent().children(".alert-id").val();
+            var json = {
+                AlertId: alertId
+            };
+
+            sendAJAXComments("@Url.Action("GetComments", "Home")", JSON.stringify(json))
+        });
+
+
+        delete_btn.on('click', function () {
+            mapIndex = $(this).val();
+            alertId = $('#map-' + mapIndex).parent().children(".alert-id").val();
+        });
+
+        function setCommentId(value) {
+            commentId = value;
+        }
+        submit_comment.on('click', function () {
+            var comment_content = $("#comment-content").val();
+            $("#comment-content").val("");
+            var json = {
+                AlertId: alertId,
+                Comment: comment_content
+            };
+
+            sendAJAXComments("@Url.Action("AddCommentAsync", "Home")", JSON.stringify(json))
+        });
+
+
+        image_button.on('click', function () {
+            mapIndex = $(this).val();
+            alertId = $('#map-' + mapIndex).parent().children(".alert-id").val();
+            var json = {
+                AlertId : alertId
+            }
+
+            $.ajax({
+                url: "@Url.Action("FetchAlertImage", "Home")",
+                type: 'POST',
+                data: JSON.stringify(json),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    $('#image-list').children().remove();
+                    $('#image-list').append('<img src="data:image/jpeg;base64,' + response+
+                        '"alt="Circle Image" class="img-thumbnail img-fluid mr-3">');
+                }
+            });
+
+        });
+
+        // confirmation on delete
+        confirm_delete_comment.on('click', function () {
+
+            var json = {
+                CommentId: commentId,
+                AlertId: alertId
+            }
+            sendAJAXComments('@Url.Action("DeleteCommentAsync", "Home")', JSON.stringify(json));
+
+        });
+
+        confirm_delete.on('click', function () {
+            var json = {
+                AlertId : alertId
+            };
+            $.ajax({
+                url: "@Url.Action("DeleteAlertAsync", "Home")",
+                type: 'POST',
+                data: JSON.stringify(json),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function () {
+                    $("#deleteModal").modal('hide');
+                    $('#map-' + mapIndex).parent().remove();
+                }
+            });
+        });
+
+
+        function sendAJAXComments(_url, _data) {
+            $.ajax({
+                url: _url,
+                type: 'POST',
+                data: _data,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    $("#deleteComment").modal('hide');
+                    $("#CommentModal").modal('show');
+                    ShowComments(response, '@Html.Raw(Model.User.Id)');
+                }
+            });
+        }
+
+    </script>
+
+    <script>
+        var map_container = $('.map-container');
+        var notification = $('.notification');
+        var popover_body = $('.popover-body');
+        notification.on("click", function () {
+            fetchNotifications();
+        });
+
+        function resizeCard(e) { // resize map card accepts map index
+
+            comment_container.toggleClass('hide');
+            var num = parseInt("@Html.Raw(Model.Alerts.Count)");
+            var larg = $('#' + e);
+            larg.parent().toggleClass('large');
+
+            alertId = larg.parent().children('.alert-id').val();
+            queryAlert(e.split("-")[1], alertId);
+
+            setTimeout(function () {
+                window.dispatchEvent(new Event('resize'));
+            }, 700);
+
+            var json = {
+                AlertId: alertId
+            };
+
+            sendAJAXComments("@Url.Action("GetComments", "Home")", JSON.stringify(json));
+            window.scrollTo(0, 20);
+            for (var i = 0; i < num; i++) {
+                if (e == 'map-' + i) {
+                    continue;
+                }
+                var _map = $('#map-' + i).parent();
+                if (_map.hasClass('large')) {
+                    _map.toggleClass('large');
+                    comment_container.toggleClass('hide');
+                }
+                map_container.append(_map);
+            }
+
+            comment_container.insertAfter(larg.parent());
+        }
+
+        function queryAlert(mapId, alertId) { // retreives a single alert from server
+
+            var json = { "AlertId": alertId };
+             $.ajax({
+                url: "@Url.Action("GetAlert", "Home")",
+                type: 'POST',
+                data: JSON.stringify(json),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (resp) {
+                    loadMap(resp.UserAlertStrings, mapId);
+                }
+            });
+        }
+
+
+
+    </script>
+
+</body>

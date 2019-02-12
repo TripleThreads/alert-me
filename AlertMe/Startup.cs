@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using AlertMe.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using AlertMe.Models;
+using Microsoft.AspNetCore.Authentication.Facebook;
 
 namespace AlertMe
 {
@@ -37,8 +39,15 @@ namespace AlertMe
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
-            services.AddDefaultIdentity<IdentityUser>()
+            services.AddDefaultIdentity<User>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
+
+            services.AddAuthentication().AddFacebook(
+                option =>
+            {
+                option.AppId = "2280514485539365";
+                option.AppSecret = "883571810318d7f75d8743e551fb0aaf";
+            });
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
@@ -62,6 +71,7 @@ namespace AlertMe
             app.UseCookiePolicy();
 
             app.UseAuthentication();
+
 
             app.UseMvc(routes =>
             {
