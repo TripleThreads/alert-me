@@ -17,15 +17,12 @@ namespace AlertMe.Models
 
         public string SubscribedToId { get; set; }
 
-        public int? UnSeenAlertId { get; set; }
+        public bool UnSeen { get; set; }
 
         [ForeignKey("SubscriberId")]
         public User Subscriber { get; set; }
 
         [ForeignKey("SubscribedToId")]
         public User SubscribedTo { get; set; }
-
-        [ForeignKey("UnSeenAlertId")]
-        public Alert UnSeenAlert { get; set; }
     }
 }

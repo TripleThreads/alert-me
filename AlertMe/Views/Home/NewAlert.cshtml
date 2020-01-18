@@ -31,7 +31,7 @@
         color: #d12727;
     }
 </style>
-<body onload="getLocation()">
+<body onload="getLocation();">
     @using (Html.BeginForm(CreateOrUpdate, "Home", FormMethod.Post, new { enctype = "multipart/form-data" }))
     {
 
@@ -117,6 +117,7 @@
 
 
         $(document).ready(function () {
+            getLocation();
             console.log(@Html.Raw(Model.Id))
             console.log(@Html.Raw(Model.ParsedImage));
         })
@@ -147,14 +148,14 @@
         });
 
         function addMarker(e) {
-            console.log(e.geom);
+            console.log(e);
             try {
                 map.removeLayer("circles");
                 map.removeSource("markers");
 
             }
             catch (err) {
-                //        alert("Error!");
+
             }
             finally {
                 map.addSource('markers', {
@@ -193,8 +194,9 @@
             }
         }
 
-        function getLocation(e) {
+        function getLocation() {
             if (navigator.geolocation) {
+
                 return navigator.geolocation.getCurrentPosition(setLocation);
             } else {
                 x.innerHTML = "Geolocation is not supported by this browser.";

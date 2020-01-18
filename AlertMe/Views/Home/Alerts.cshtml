@@ -51,7 +51,7 @@
         }
 
         .map-container .card.large {
-            width: 60%;
+            width: 42rem;
             height : 35rem;
         }
         #comment-container.hide{
@@ -142,7 +142,6 @@
 
                     @if (Model.User.Id.Equals(Model.Alerts.ElementAt(index).CreatedById))
                     {
-
                         <a class="btn btn-sm btn-social btn-link" data-toggle="tooltip" title="edit" value="@index"
                            asp-action="EditAlert/@Model.Alerts.ElementAt(index).Id">
                             <i class="material-icons text-gray">edit</i>
@@ -410,8 +409,9 @@
 
             mapboxgl.accessToken = 'pk.eyJ1Ijoic2VnbmkiLCJhIjoiY2pyM2N5a2Z2MHRjZDQ4cW14a3NhMzkxdSJ9.YfPekPetxFfh-eWsouEEEQ';
 
+            
             var AlertsArray = JSON.parse('@Html.Raw(Model.JsonFormat)');
-
+            console.log(AlertsArray);
             for (var i = 0; i < AlertsArray.length; i++) {
                 await loadMap(AlertsArray[i].UserAlertStrings, i);
             }
@@ -548,12 +548,13 @@
         function resizeCard(e) { // resize map card accepts map index
 
             comment_container.toggleClass('hide');
-            var num = parseInt("@Html.Raw(Model.Alerts.Count)");
+
             var larg = $('#' + e);
             larg.parent().toggleClass('large');
 
             alertId = larg.parent().children('.alert-id').val();
-            queryAlert(e.split("-")[1], alertId);
+
+            queryAlert(e.split("-")[1], alertId, e, larg);
 
             setTimeout(function () {
                 window.dispatchEvent(new Event('resize'));
@@ -565,23 +566,9 @@
 
             sendAJAXComments("@Url.Action("GetComments", "Home")", JSON.stringify(json));
             window.scrollTo(0, 20);
-            for (var i = 0; i < num; i++) {
-                if (e == 'map-' + i) {
-                    continue;
-                }
-                var _map = $('#map-' + i).parent();
-                if (_map.hasClass('large')) {
-                    _map.toggleClass('large');
-                    comment_container.toggleClass('hide');
-                }
-                map_container.append(_map);
-            }
-
-            comment_container.insertAfter(larg.parent());
         }
 
-        function queryAlert(mapId, alertId) { // retreives a single alert from server
-
+        function queryAlert(mapId, alertId, e, larg) { // retreives a single alert from server
             var json = { "AlertId": alertId };
              $.ajax({
                 url: "@Url.Action("GetAlert", "Home")",
@@ -589,13 +576,40 @@
                 data: JSON.stringify(json),
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
-                success: function (resp) {
-                    loadMap(resp.UserAlertStrings, mapId);
+                 success: function (resp) {
+                     loadMap(resp[0].UserAlertStrings, mapId);
+                     resp.shift();
+                     show_sorted_alerts(resp, e, larg);
                 }
             });
         }
 
+        function show_sorted_alerts(sorted_alerts, e, larg) {
+            var num = parseInt("@Html.Raw(Model.Alerts.Count)");
+            $.each(sorted_alerts, function (index, value) {
 
+                for (var i = 0; i < num; i++) {
+
+                    if (e == 'map-' + i) {
+                        continue;
+                    }
+                    var _map = $('#map-' + i).parent();
+                    if (_map.hasClass('large')) {
+                        _map.toggleClass('large');
+                        comment_container.toggleClass('hide');
+                    }
+                    if (value.Id == _map.children('.alert-id').val()) {
+                        console.log(value.Tag)
+                        map_container.append(_map);
+                    }
+
+                }
+
+            });
+
+            comment_container.insertAfter(larg.parent());
+
+        }
 
     </script>
 

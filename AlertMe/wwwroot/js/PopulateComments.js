@@ -1,5 +1,6 @@
 ﻿function ShowComments(response, current_user) {
     console.log(response);
+    console.log('erroorrrrrr');
     $("#comment-list").children().remove();
     $(".comment-number-" + mapIndex).text(response.length);
     for (var i = 0; i < response.length; i++) {
@@ -8,8 +9,9 @@
             $('#comment-list').append('<img src="../images/profile_placeholder.png" class= "rounded-circle img-fluid mr-3"' +
                 ' style = "width:3rem;" alt = "profile"> ');
         } else {
-            $('#comment-list').append('<img src="data:image/jpeg;base64,' + response[i].PicOfCommento +
-                '"alt="Circle Image" style= "width:2.5rem" class= "rounded-circle img-fluid mr-3">');
+            $('#comment-list').append('<a href="/Home/ViewProfileGet?userId=' + response[i].CommentedBy
+                +'"><img src="data:image/jpeg;base64,' + response[i].PicOfCommento +
+                '"alt="Circle Image" style= "width:2.5rem" class= "rounded-circle img-fluid mr-3"> </a  >');
         }
 
 

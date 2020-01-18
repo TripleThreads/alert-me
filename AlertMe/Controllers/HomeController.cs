@@ -17,7 +17,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-
 namespace Alert_Me.Controllers
 {
 
@@ -82,7 +81,7 @@ namespace Alert_Me.Controllers
             List<Alert> alerts = new List<Alert>();
             
             var _alerts = (from row in applicationDbContext.Alerts
-                           where row.CreatedAt > DateTime.Now.AddDays(-14) orderby row.CreatedAt ascending
+                           where row.CreatedAt > DateTime.Now.AddDays(-14) orderby row.CreatedAt descending
                            select row);
 
             var getSubscribedAlerts = GetSubscribedAlerts(user);
@@ -92,7 +91,7 @@ namespace Alert_Me.Controllers
                 alert.UserAlertStrings = GetGeoJson(alert);
                 alert.CreatedBy = GetUser(alert.CreatedById);
 
-                if (!getSubscribedAlerts.Contains(alert))
+                if (getSubscribedAlerts.Contains(alert))
                 {
                     alerts.Insert(0, alert);
                 }
@@ -159,7 +158,6 @@ namespace Alert_Me.Controllers
         }
 
 
-        [HttpPost]
         public async Task<ActionResult> CreateAlert(Alert alert)
         {
             User user = await _userManager.GetUserAsync(HttpContext.User);
@@ -204,7 +202,7 @@ namespace Alert_Me.Controllers
                 var Follows = GetFollowers(user.Id);
                 foreach (Follow follow in Follows)
                 {
-                    follow.UnSeenAlertId = alert.Id;
+                    follow.UnSeen = true;
                 }
                 applicationDbContext.Follows.UpdateRange(Follows);
                 applicationDbContext.AlertForSubscribers.Add(alertFor);
@@ -394,25 +392,33 @@ namespace Alert_Me.Controllers
         {
             string userId = formFields["id"];
             User user = GetUser(userId);
-            User loggedInUser = await _userManager.GetUserAsync(HttpContext.User);
-            ViewProfileViewModel viewProfileView = new ViewProfileViewModel
-            {
-                User = user,
-                IsLoggedInUser = (user.Id.Equals(loggedInUser.Id)),
-                LoggedInUserSubscribed = IsSubscribedTo(loggedInUser.Id, user.Id) != null
-            };
-            return View(viewProfileView);
+            return await RedirectToProfile(user);
         }
+
+        [HttpGet("/Home/ViewProfileGet/{userId ?}")]
+        public async Task<ActionResult> ViewProfileGet(string userId)
+        {
+            if (userId == null) return RedirectToAction("Alerts");
+            User user = GetUser(userId);
+            return await RedirectToProfile(user);
+        }
+
 
         [HttpPost]
         public string GetAlert([FromBody] JObject jObject)
         {
             var alertId = jObject.GetValue("AlertId").Value<int>();
             Alert alert = GetAlert(alertId);
-            var geoJson = GetGeoJson(alert);
 
-            alert.UserAlertStrings = geoJson;
-            return JsonConvert.SerializeObject(alert);
+            var alerts = GetAlertsBySimilarity(alert);
+
+            foreach (var _alert in alerts)
+            {
+                _alert.UserAlertStrings = GetGeoJson(_alert);
+                _alert.CreatedBy = GetUser(_alert.CreatedById);
+            }
+            
+            return JsonConvert.SerializeObject(alerts);
         }
 
         [HttpPost]
@@ -668,6 +674,18 @@ namespace Alert_Me.Controllers
         
         }
 
+        private async Task<ActionResult> RedirectToProfile(User user)
+        {
+            User loggedInUser = await _userManager.GetUserAsync(HttpContext.User);
+            ViewProfileViewModel viewProfileView = new ViewProfileViewModel
+            {
+                User = user,
+                IsLoggedInUser = (user.Id.Equals(loggedInUser.Id)),
+                LoggedInUserSubscribed = IsSubscribedTo(loggedInUser.Id, user.Id) != null
+            };
+            return View("ViewProfile", viewProfileView);
+        }
+
         public HashSet<Alert> GetSubscribedAlerts(User user)
         {
             HashSet<Alert> alertsFromSubscription = new HashSet<Alert>();
@@ -677,9 +695,9 @@ namespace Alert_Me.Controllers
 
             foreach(var _follow in subs)
             {
-                if (_follow.UnSeenAlertId != null)
+                if (_follow.UnSeen)
                 {
-                    _follow.UnSeenAlertId = null;
+                    _follow.UnSeen = false;
                     follows.Add(_follow.SubscribedToId);
                 }
             }
@@ -688,10 +706,16 @@ namespace Alert_Me.Controllers
 
             var alerts = from row in applicationDbContext.AlertForSubscribers
                          where follows.Contains(row.CreatedBy)
-                         select alertsFromSubscription.Add(GetAlert(row.AlertId));
+                         select row.AlertId;
+
+            foreach(var alertId in alerts)
+            {
+                alertsFromSubscription.Add(GetAlert(alertId));
+            }
 
             applicationDbContext.Follows.UpdateRange(subs);
             applicationDbContext.SaveChanges();
+
             return alertsFromSubscription;
         }
 
@@ -753,6 +777,35 @@ namespace Alert_Me.Controllers
             User user = await _userManager.GetUserAsync(HttpContext.User);
 
             return new JsonAlertViewModel { Alerts = readyAlerts, JsonFormat = JsonFormat, User = user };
+        }
+
+        public List<Alert> GetAlertsBySimilarity(Alert alert)
+        {
+            HashSet<string> tags = alert.Tags.Split(",").ToHashSet();
+            List<Alert> sortedAlerts = new List<Alert> { alert };
+            Dictionary<Alert, int> alertSimilarityPairs = new Dictionary<Alert, int>();
+            IQueryable<Alert> alerts = (from row in applicationDbContext.Alerts select row);
+
+            foreach (Alert _alert in alerts)
+            {
+                if (_alert.Id == alert.Id) continue;
+                alertSimilarityPairs[_alert] = 0;
+                string[] _tags = _alert.Tags.Split(",");
+
+                foreach (var _tag in _tags)
+                {
+                    if (tags.Contains(_tag))
+                    {
+                        alertSimilarityPairs[_alert]++;
+                    }
+                }
+
+            }
+            foreach (var AlertValue in alertSimilarityPairs.OrderByDescending(key => key.Value))
+            {
+                sortedAlerts.Add(AlertValue.Key);
+            }
+            return sortedAlerts;
         }
     }
 

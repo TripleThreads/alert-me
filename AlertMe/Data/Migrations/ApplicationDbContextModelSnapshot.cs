@@ -130,15 +130,13 @@ namespace AlertMe.Data.Migrations
 
                     b.Property<string>("SubscriberId");
 
-                    b.Property<int?>("UnSeenAlertId");
+                    b.Property<bool>("UnSeen");
 
                     b.HasKey("Id");
 
                     b.HasIndex("SubscribedToId");
 
                     b.HasIndex("SubscriberId");
-
-                    b.HasIndex("UnSeenAlertId");
 
                     b.ToTable("Follows");
                 });
@@ -434,10 +432,6 @@ namespace AlertMe.Data.Migrations
                     b.HasOne("AlertMe.Models.User", "Subscriber")
                         .WithMany()
                         .HasForeignKey("SubscriberId");
-
-                    b.HasOne("AlertMe.Models.Alert", "UnSeenAlert")
-                        .WithMany()
-                        .HasForeignKey("UnSeenAlertId");
                 });
 
             modelBuilder.Entity("AlertMe.Models.Notification", b =>

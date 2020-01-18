@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AlertMe.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20190129055306_UserAlertsAdded")]
-    partial class UserAlertsAdded
+    [Migration("20190212230728_Fixedissue")]
+    partial class Fixedissue
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -27,10 +27,26 @@ namespace AlertMe.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<DateTime>("CreatedAt");
+
                     b.Property<string>("CreatedById");
+
+                    b.Property<int>("Critical");
 
                     b.Property<string>("Description")
                         .IsRequired();
+
+                    b.Property<int>("FalseAlarm");
+
+                    b.Property<DateTime>("LastCheck");
+
+                    b.Property<double>("Latitude");
+
+                    b.Property<double>("Longitude");
+
+                    b.Property<int>("NumberOfComments");
+
+                    b.Property<byte[]>("Picture");
 
                     b.Property<string>("Tags")
                         .IsRequired();
@@ -38,11 +54,32 @@ namespace AlertMe.Data.Migrations
                     b.Property<string>("Title")
                         .IsRequired();
 
+                    b.Property<int>("Warning");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
 
                     b.ToTable("Alerts");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.AlertForSubscribed", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("AlertId");
+
+                    b.Property<string>("CreatedBy");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertId");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.ToTable("AlertForSubscribers");
                 });
 
             modelBuilder.Entity("AlertMe.Models.City", b =>
@@ -60,6 +97,73 @@ namespace AlertMe.Data.Migrations
                     b.HasIndex("StateId");
 
                     b.ToTable("Cities");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Comment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("AlertId");
+
+                    b.Property<string>("CommentContent");
+
+                    b.Property<DateTime>("CommentedAt");
+
+                    b.Property<string>("CommentedBy");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertId");
+
+                    b.HasIndex("CommentedBy");
+
+                    b.ToTable("Comments");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Follow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<string>("SubscribedToId");
+
+                    b.Property<string>("SubscriberId");
+
+                    b.Property<bool>("UnSeen");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscribedToId");
+
+                    b.HasIndex("SubscriberId");
+
+                    b.ToTable("Follows");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int>("AlertId");
+
+                    b.Property<string>("NotifactionContent");
+
+                    b.Property<bool>("Seen");
+
+                    b.Property<string>("UserId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlertId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("AlertMe.Models.State", b =>
@@ -111,11 +215,15 @@ namespace AlertMe.Data.Migrations
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256);
 
+                    b.Property<int>("NumberOfSubscribers");
+
                     b.Property<string>("PasswordHash");
 
                     b.Property<string>("PhoneNumber");
 
                     b.Property<bool>("PhoneNumberConfirmed");
+
+                    b.Property<byte[]>("Picture");
 
                     b.Property<string>("SecurityStamp");
 
@@ -286,11 +394,58 @@ namespace AlertMe.Data.Migrations
                         .HasForeignKey("CreatedById");
                 });
 
+            modelBuilder.Entity("AlertMe.Models.AlertForSubscribed", b =>
+                {
+                    b.HasOne("AlertMe.Models.Alert", "Alert")
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AlertMe.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy");
+                });
+
             modelBuilder.Entity("AlertMe.Models.City", b =>
                 {
                     b.HasOne("AlertMe.Models.State")
                         .WithMany("Cities")
                         .HasForeignKey("StateId");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Comment", b =>
+                {
+                    b.HasOne("AlertMe.Models.Alert", "Alert")
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AlertMe.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("CommentedBy");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Follow", b =>
+                {
+                    b.HasOne("AlertMe.Models.User", "SubscribedTo")
+                        .WithMany()
+                        .HasForeignKey("SubscribedToId");
+
+                    b.HasOne("AlertMe.Models.User", "Subscriber")
+                        .WithMany()
+                        .HasForeignKey("SubscriberId");
+                });
+
+            modelBuilder.Entity("AlertMe.Models.Notification", b =>
+                {
+                    b.HasOne("AlertMe.Models.Alert", "Alert")
+                        .WithMany()
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("AlertMe.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("AlertMe.Models.UsersAlerts", b =>
